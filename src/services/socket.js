@@ -69,6 +69,24 @@ class SocketService {
     }
   }
 
+  onCommentaryUpdate(callback) {
+    if (this.socket) {
+      this.socket.on('commentary-update', callback);
+    }
+  }
+
+  onMatchStatusUpdate(callback) {
+    if (this.socket) {
+      this.socket.on('match-status-update', callback);
+    }
+  }
+
+  onMatchListUpdate(callback) {
+    if (this.socket) {
+      this.socket.on('match-list-update', callback);
+    }
+  }
+
   offMatchUpdate() {
     if (this.socket) {
       this.socket.off('match-update');
@@ -84,6 +102,48 @@ class SocketService {
   offInningsEnded() {
     if (this.socket) {
       this.socket.off('innings-ended');
+    }
+  }
+
+  offCommentaryUpdate() {
+    if (this.socket) {
+      this.socket.off('commentary-update');
+    }
+  }
+
+  offMatchStatusUpdate() {
+    if (this.socket) {
+      this.socket.off('match-status-update');
+    }
+  }
+
+  offMatchListUpdate() {
+    if (this.socket) {
+      this.socket.off('match-list-update');
+    }
+  }
+
+  // Clean up all event listeners
+  removeAllListeners() {
+    if (this.socket) {
+      this.socket.off('match-update');
+      this.socket.off('over-completed');
+      this.socket.off('innings-ended');
+      this.socket.off('commentary-update');
+      this.socket.off('match-status-update');
+      this.socket.off('match-list-update');
+    }
+  }
+
+  // Get connection status
+  getConnectionStatus() {
+    return this.isConnected ? 'connected' : 'disconnected';
+  }
+
+  // Emit custom events
+  emit(event, data) {
+    if (this.socket) {
+      this.socket.emit(event, data);
     }
   }
 }

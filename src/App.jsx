@@ -11,6 +11,7 @@ import LiveModeGuide from "./components/LiveModeGuide";
 import CommentaryTest from "./components/CommentaryTest";
 import BatsmenScorecard from "./components/BatsmenScorecard";
 import InningsBreakdown from "./components/InningsBreakdown";
+import LiveMatches from "./pages/LiveMatches";
 import { useMatchAPI } from "./hooks/useMatchAPI";
 import socketService from "./services/socket";
 
@@ -64,6 +65,7 @@ export default function App() {
   const [autoSave, setAutoSave] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [lastBall, setLastBall] = useState(null);
+  const [currentView, setCurrentView] = useState('scoring'); // 'scoring' or 'live-matches'
   const { loading, error, saveMatch, updateMatch } = useMatchAPI();
 
   useEffect(() => {
@@ -432,10 +434,31 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  if (currentView === 'live-matches') {
+    return <LiveMatches />;
+  }
+
   return (
     <div className="app-container">
       <div className="header">
-        <h2 style={{ margin: 0 }}>Cricket Scoring App</h2>
+        <div className="header-left">
+          <h2 style={{ margin: 0 }}>Cricket Scoring App</h2>
+          <div className="nav-buttons">
+            <button 
+              className={`btn ${currentView === 'scoring' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setCurrentView('scoring')}
+            >
+              📝 Scoring
+            </button>
+            <button 
+              className={`btn ${currentView === 'live-matches' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setCurrentView('live-matches')}
+            >
+              🏏 Live Matches
+            </button>
+          </div>
+        </div>
+        
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {error && <span style={{ color: 'red', fontSize: '12px' }}>API Error: {error}</span>}
           {loading && <span style={{ color: 'blue', fontSize: '12px' }}>Saving...</span>}
@@ -517,4 +540,46 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+// Add styles for the new navigation
+const styles = `
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .nav-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .nav-buttons .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  @media (max-width: 768px) {
+    .header {
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+    }
+    
+    .header-left {
+      justify-content: center;
+    }
+    
+    .nav-buttons {
+      justify-content: center;
+    }
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
 }
