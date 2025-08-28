@@ -25,6 +25,7 @@ export default function OngoingMatches({ onSelectMatch, selectedMatchId }) {
                (fullMatch.ballCount > 0 || fullMatch.runs > 0);
       });
       
+      // Show all ongoing matches (sorted by most recent first)
       setMatches(ongoingMatches);
       setError(null);
     } catch (err) {
@@ -47,6 +48,16 @@ export default function OngoingMatches({ onSelectMatch, selectedMatchId }) {
     const overDisplay = ballsInCurrentOver > 0 ? `${oversCompleted}.${ballsInCurrentOver}` : `${oversCompleted}`;
     
     return `${fullMatch.runs || 0}/${fullMatch.wickets || 0} (${overDisplay}/${fullMatch.overs})`;
+  };
+
+  const getMatchInnings = (match) => {
+    const fullMatch = match.fullMatchJSON || match;
+    if (fullMatch.currentInnings === 2) {
+      const target = fullMatch.target || 0;
+      const needed = Math.max(0, target - (fullMatch.runs || 0));
+      return `Need ${needed} runs • 2nd Innings`;
+    }
+    return '1st Innings';
   };
 
   if (loading) {
@@ -101,6 +112,7 @@ export default function OngoingMatches({ onSelectMatch, selectedMatchId }) {
             >
               <div className="match-title">{getMatchTitle(match)}</div>
               <div className="match-score">{getMatchScore(match)}</div>
+              <div className="match-innings">{getMatchInnings(match)}</div>
               <div className="match-status">🔴 LIVE</div>
             </div>
           ))}
@@ -149,6 +161,12 @@ export default function OngoingMatches({ onSelectMatch, selectedMatchId }) {
         .match-score {
           font-size: 13px;
           color: #4b5563;
+          margin-bottom: 2px;
+        }
+
+        .match-innings {
+          font-size: 11px;
+          color: #6b7280;
           margin-bottom: 4px;
         }
 
