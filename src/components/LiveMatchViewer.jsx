@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import OngoingMatches from './OngoingMatches';
 import MatchCommentaryViewer from './MatchCommentaryViewer';
 import socketService from '../services/socket';
+import { matchAPI } from '../services/api';
 
 export default function LiveMatchViewer() {
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -10,13 +11,20 @@ export default function LiveMatchViewer() {
   useEffect(() => {
     // Initialize WebSocket connection for the live matches page
     socketService.connect();
-    
+
     // Monitor connection status
     const socket = socketService.socket;
     if (socket) {
       socket.on('connect', () => setConnectionStatus('connected'));
       socket.on('disconnect', () => setConnectionStatus('disconnected'));
       socket.on('connect_error', () => setConnectionStatus('error'));
+    }
+
+    // Check URL parameters for match selection
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('match');
+    if (matchId) {
+      loadMatchById(matchId);
     }
 
     return () => {
@@ -28,6 +36,25 @@ export default function LiveMatchViewer() {
       }
     };
   }, []);
+
+  const loadMatchById = async (matchId) => {
+    try {
+      const match = await matchAPI.getMatch(matchId);
+      setSelectedMatch(match);
+    } catch (error) {
+      console.error('Failed to load match:', error);
+      // If direct match loading fails, try to find it in the matches list
+      try {
+        const matches = await matchAPI.getAllMatches();
+        const foundMatch = matches.find(m => m._id === matchId);
+        if (foundMatch) {
+          setSelectedMatch(foundMatch);
+        }
+      } catch (err) {
+        console.error('Failed to load matches:', err);
+      }
+    }
+  };
 
   const handleSelectMatch = (match) => {
     setSelectedMatch(match);
@@ -42,7 +69,7 @@ export default function LiveMatchViewer() {
     const oversCompleted = fullMatch.completedOvers?.length || 0;
     const ballsInCurrentOver = fullMatch.currentOverBalls?.filter(b => b.isLegal).length || 0;
     const overDisplay = ballsInCurrentOver > 0 ? `${oversCompleted}.${ballsInCurrentOver}` : `${oversCompleted}`;
-    
+
     if (fullMatch.currentInnings === 2) {
       const target = fullMatch.target || 0;
       const needed = Math.max(0, target - (fullMatch.runs || 0));
@@ -67,30 +94,46 @@ export default function LiveMatchViewer() {
           </div>
         </div>
         <div className="subtitle">
-          {selectedMatch ? 
-            'Real-time commentary and match updates' : 
-            'Select a match to view real-time commentary and updates'
+          {selectedMatch ?
+            'Real-time commentary and match updates' :
+            'Click on any match to open it in a new tab for live viewing'
           }
         </div>
       </div>
 
       <div className="viewer-content">
         <div className="matches-panel">
-          <OngoingMatches 
+          <OngoingMatches
             onSelectMatch={handleSelectMatch}
             selectedMatchId={selectedMatch?._id}
           />
-          
+
           {selectedMatch && (
             <div className="selected-match-info">
               <div className="info-header">
                 <h4>Selected Match</h4>
-                <button 
-                  className="btn btn-ghost btn-sm"
-                  onClick={handleBackToMatches}
-                >
-                  ← Back to matches
-                </button>
+                <div className="header-actions">
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const liveUrl = `${window.location.origin}/live-matches?match=${selectedMatch._id}`;
+                      navigator.clipboard.writeText(liveUrl).then(() => {
+                        alert('Live match link copied to clipboard!');
+                      }).catch(() => {
+                        prompt('Copy this live match link:', liveUrl);
+                      });
+                    }}
+                    title="Copy live match link"
+                  >
+                    📋 Share Link
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleBackToMatches}
+                  >
+                    ← Back
+                  </button>
+                </div>
               </div>
               <div className="match-details">
                 <div className="match-title">
@@ -99,13 +142,16 @@ export default function LiveMatchViewer() {
                 <div className="match-status">
                   {getSelectedMatchStatus(selectedMatch)}
                 </div>
+                <div className="match-id">
+                  Match ID: {selectedMatch.matchId || selectedMatch._id}
+                </div>
               </div>
             </div>
           )}
         </div>
 
         <div className="commentary-panel">
-          <MatchCommentaryViewer 
+          <MatchCommentaryViewer
             match={selectedMatch}
             isVisible={!!selectedMatch}
           />
@@ -195,6 +241,12 @@ export default function LiveMatchViewer() {
           font-weight: 600;
         }
 
+        .header-actions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
         .match-details {
           font-size: 13px;
         }
@@ -207,6 +259,12 @@ export default function LiveMatchViewer() {
 
         .match-status {
           color: #4b5563;
+        }
+
+        .match-id {
+          color: #6b7280;
+          font-size: 11px;
+          margin-top: 4px;
         }
 
         .btn {
@@ -237,6 +295,17 @@ export default function LiveMatchViewer() {
         .btn-sm {
           padding: 2px 6px;
           font-size: 10px;
+        }
+
+        .btn-primary {
+          background: #3b82f6;
+          color: white;
+          border-color: #3b82f6;
+        }
+
+        .btn-primary:hover {
+          background: #2563eb;
+          border-color: #2563eb;
         }
 
         @media (max-width: 1024px) {

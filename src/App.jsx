@@ -65,7 +65,14 @@ export default function App() {
   const [autoSave, setAutoSave] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [lastBall, setLastBall] = useState(null);
-  const [currentView, setCurrentView] = useState('scoring'); // 'scoring' or 'live-matches'
+  const [currentView, setCurrentView] = useState(() => {
+    // Check URL to determine initial view
+    const path = window.location.pathname;
+    if (path === '/live-matches' || window.location.search.includes('match=')) {
+      return 'live-matches';
+    }
+    return 'scoring';
+  });
   const { loading, error, saveMatch, updateMatch } = useMatchAPI();
 
   useEffect(() => {
@@ -77,11 +84,25 @@ export default function App() {
     }
   }, [match]);
 
+  // Handle URL changes for navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/live-matches' || window.location.search.includes('match=')) {
+        setCurrentView('live-matches');
+      } else {
+        setCurrentView('scoring');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleAutoSave = async () => {
     try {
       if (currentMatchId) {
         // Check if over was just completed
-        const previousOverCount = match.completedOvers?.length || 0;
         const wasInningsOver = match.isInningsOver;
 
         const additionalData = {};
@@ -92,7 +113,7 @@ export default function App() {
           if (lastBall.overJustCompleted) {
             additionalData.overCompleted = true;
             additionalData.completedOver = lastBall.completedOverData;
-            additionalData.overNumber = previousOverCount + 1;
+            additionalData.overNumber = (match.completedOvers?.length || 0) + 1;
           }
 
           // Check if innings just ended
@@ -446,13 +467,20 @@ export default function App() {
           <div className="nav-buttons">
             <button 
               className={`btn ${currentView === 'scoring' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setCurrentView('scoring')}
+              onClick={() => {
+                setCurrentView('scoring');
+                window.history.pushState({}, '', '/');
+              }}
             >
               📝 Scoring
             </button>
             <button 
               className={`btn ${currentView === 'live-matches' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setCurrentView('live-matches')}
+              onClick={() => {
+                // Open Live Matches in new tab
+                window.open('/live-matches', '_blank');
+              }}
+              title="Open Live Matches in new tab"
             >
               🏏 Live Matches
             </button>
